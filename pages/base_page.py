@@ -2,7 +2,7 @@ from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.action_chains import ActionChains
-
+import allure
 
 class BasePage:
     """
@@ -15,18 +15,18 @@ class BasePage:
         self.timeout = 10
         self.wait = WebDriverWait(self.driver, 10)
 
-    #   Открыть базовую страницу
+    @allure.step('Открыть базовую страницу')
     def open(self):
         if self.BASE_URL:
             self.go_to_url(self.BASE_URL)
         else:
-            raise UnboundLocalError
+            raise UnboundLocalError("BASE_URL не установлен")
 
-    #   Перейти на страницу по адресу
+    @allure.step('Перейти на страницу по адресу')
     def go_to_url(self, url):
         self.driver.get(url)
 
-    #   Найти visible-элемент на странице
+    @allure.step('Найти visible-элемент на странице')
     def find_visible_element(self, locator):
         try:
             element = self.wait_for_visibility(locator)
@@ -34,7 +34,7 @@ class BasePage:
         except:
             return None
 
-    #   Найти invisible-элемент на странице
+    @allure.step('Найти invisible-элемент на странице')
     def find_invisible_element(self, locator):
         try:
             element = self.wait.until(ec.presence_of_element_located(locator))
@@ -42,15 +42,15 @@ class BasePage:
         except:
             return None
     
-    #   Ожидание отображение элемента
+    @allure.step('Ожидание отображение элемента')
     def wait_for_visibility(self, locator):
         return self.wait.until(ec.visibility_of_element_located(locator))
         
-    #   Ожидание сокрытия элемента
+    @allure.step('Ожидание сокрытия элемента')
     def wait_for_invisibility(self, locator):
         return self.wait.until(ec.invisibility_of_element_located(locator))
     
-    #   Пролистать страницу до элемента
+    @allure.step('Пролистать страницу до элемента')
     def scroll_to_element(self, locator):
         element = self.find_visible_element(locator)
         if element:
@@ -60,7 +60,7 @@ class BasePage:
             except:
                 self.driver.execute_script("arguments[0].scrollIntoView();", element)
 
-    #   Кликнуть на элемент на странице
+    @allure.step('Кликнуть на элемент на странице')
     def click_to_element(self, locator):
         element = self.wait.until(ec.element_to_be_clickable(locator))
         self.scroll_to_element(locator)
@@ -69,13 +69,13 @@ class BasePage:
         except:
             self.driver.execute_script("arguments[0].click();", element)
 
-    #   Передать текст в элемент ввода
+    @allure.step('Передать текст в элемент ввода')
     def set_text_to_element(self, locator, text):
         element = self.find_visible_element(locator)
         if element:
             element.send_keys(text)
     
-    #   Получить текст элемента
+    @allure.step('Получить текст элемента')
     def get_text_from_element(self, locator):
         element = self.find_visible_element(locator)
         if element:
@@ -83,19 +83,24 @@ class BasePage:
             return text
         return None
 
-    #   Приватный метод для внутренней проверки загрузки страницы
+    @allure.step('Приватный метод для внутренней проверки загрузки страницы')
     def _verify_page_loaded(self, locator):
-            WebDriverWait(self.driver, 10).until(ec.presence_of_element_located(locator))     # Ждем появления уникального элемента на странице
+        try:
+            WebDriverWait(self.driver, 10).until(ec.presence_of_element_located(locator))
             return True
+        except:
+            return False
         
-    #  Публичный метод для проверки загрузки страницы
+    @allure.step('Публичный метод для проверки загрузки страницы')
     def is_loaded(self):
-        return self._verify_page_loaded()
-    
+        # Этот метод должен быть переопределен в дочерних классах
+        raise NotImplementedError("Метод is_loaded должен быть реализован в дочернем классе")
+    @allure.step('Ожидание отображение элемента')
     def is_element_visible(self, locator):
         try:
-            element = WebDriverWait(self.driver, 10).until(ec.visibility_of_element_located(locator))
+            element = WebDriverWait(self.driver, 5).until(ec.visibility_of_element_located(locator))
             return element.is_displayed()
         except:
             return False
+    
     
