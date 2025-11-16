@@ -1,5 +1,6 @@
 from selenium.webdriver.common.by import By
 
+
 class OrderFeedLocators:
     LINK_ORDER_FEED_ACTIVE = By.XPATH, ".//a[@aria-current='page']/p[text()='Лента Заказов']"
     LINK_ORDERS = By.XPATH, "(.//a[contains(@class, 'OrderHistory_link')])"
@@ -8,3 +9,4 @@ class OrderFeedLocators:
     P_ORDERS_TODAY_COUNTER = By.XPATH, ".//p[text()='Выполнено за сегодня:']/following-sibling::p"
     LI_ORDERS_IN_PROGRESS = By.XPATH, "(.//ul[contains(@class, 'OrderFeed_orderListReady')]/li)[1]"
     ORDERS_FEED_LINK = By.XPATH, "(.//*[@id='root']/div/header/nav/ul/li[2]/a/p)"
+    UNIQUE_ELEMENT_LOCATOR = By.XPATH, "//h1[contains(text(), 'Лента заказов')]"
