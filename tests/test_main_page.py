@@ -3,8 +3,7 @@ import pytest
 from pages.order_feed_page import OrderFeedPage
 from locators.main_page_locators import MainPageLocators
 from data import URL
-
-
+from pages.main_page import MainPage
 
 @allure.tag('main')
 @allure.title('Тестовые сценарии основной функциональности')
@@ -12,7 +11,10 @@ class TestMainPage:
     
     @allure.title('Проверка перехода на главную страницу (конструктор) с ленты заказов по кнопке')
     @allure.description('Открыть страницу ленты заказов, перейти на главную страницу, проверить загрузку главной страницы')
-    def test_main_page_open_from_order_feed_page_success(self, order_feed_page, main_page):
+    def test_main_page_open_from_order_feed_page_success(self, driver):
+        main_page = MainPage(driver)
+        order_feed_page = OrderFeedPage(driver)
+        
         # Открываем страницу ленты заказов
         order_feed_page.open()
 
@@ -25,13 +27,14 @@ class TestMainPage:
         
     @allure.title('Проверка перехода на раздел "Лента заказов" с главной страницы')
     @allure.description('Открыть главную страницу, перейти на раздел "Лента заказов", проверить загрузку страницы ленты.')
-    def test_order_feed_page_open_from_main_page_success(self, main_page, order_feed_page):
-    # Открываем главную страницу
+    def test_order_feed_page_open_from_main_page_success(self, driver):
+        main_page = MainPage(driver)
+        order_feed_page = OrderFeedPage(driver)
+        # Открываем главную страницу
         main_page.open()
         
         # Переходим на страницу ленты заказов
         order_feed = order_feed_page.navigate_to_orders_feed()
-        
         
         # Проверяем, что страница ленты заказов успешно загрузилась
         assert order_feed.is_on_order_page(), "Не удалось перейти на страницу ленты заказов"
@@ -39,8 +42,10 @@ class TestMainPage:
 
     @allure.title('Проверка появления окна с деталями ингредиента')
     @allure.description('Открыть главную страницу, кликнуть на случайный ингредиент в списке, проверить отображение всплывающего окна с деталями ингредиента')
-    def test_main_page_click_ingredient_details_popup_displayed(self, main_page):
+    def test_main_page_click_ingredient_details_popup_displayed(self, driver):
+        main_page = MainPage(driver)
         main_page.open()
+        assert main_page.is_loaded(), "Главная страница не загрузилась"
         
         main_page.click_random_ingredient()
         
@@ -48,7 +53,8 @@ class TestMainPage:
         
     @allure.title('Проверка закрытия окна с деталями ингредиента')
     @allure.description('Открыть главную страницу, кликнуть на случайный ингредиент в списке, закрыть всплывающее окно с деталями ингредиента, проверить отсутствие всплывающего окна с деталями')
-    def test_main_page_close_details_popup_not_displayed(self, main_page):
+    def test_main_page_close_details_popup_not_displayed(self, driver):
+        main_page = MainPage(driver)
         main_page.open()
         main_page.click_random_ingredient()
         
