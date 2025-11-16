@@ -2,15 +2,15 @@ import allure
 import random
 from selenium.webdriver.support.wait import WebDriverWait
 from pages.base_page import BasePage
-from locators.main_page_locators import MainPageLocators
+from locators.main_page_locators import MainPageLocators, GeneralLocators
 from data import URL
 
-class MainPage(BasePage):
 
+class MainPage(BasePage):
     BASE_URL = URL.MAIN_PAGE
 
     def __init__(self, driver):
-        self.driver = driver
+        super().__init__(driver)
         self.wait = WebDriverWait(self.driver, 10)
 
     @allure.step('Нажатие на случайный ингредиент из списка')
@@ -22,31 +22,31 @@ class MainPage(BasePage):
     @allure.step('Выбор случайного ингредиента из списка')
     def _get_random_ingredient_locator(self, type='bun'):
         ingredient_locator = MainPageLocators.LINK_INGREDIENTS
-        self.find_visible_element(ingredient_locator)     # Подождать появления списка ингредиентов
-        ingredients = self.driver.find_elements(*ingredient_locator)      # Получить все элементы списка ингредиентов
+        self.find_visible_element(ingredient_locator)
+        ingredients = self.driver.find_elements(*ingredient_locator)
         ingredients_count = len(ingredients)
 
-        if ingredients_count > 0:     # Если список ингредиентов не пустой, выбираем случайный
+        if ingredients_count > 0:
             index = 0
-            if type == 'bun':     # Булки имеют индексы 1 и 2
-                index = random.randint(1, 2)       # Если меньше 2-х элементов, берем первый доступный
-            elif type == 'ingredient':      # Соусы и котлеты начинаются с третьего элемента
+            if type == 'bun':
+                index = random.randint(1, 2)
+            elif type == 'ingredient':
                 index = random.randint(3, ingredients_count)
             else:
                 raise TypeError("Недопустимый тип ингредиента")
 
             random_locator = (
-            ingredient_locator[0],
-            f'{ingredient_locator[1]}[{index}]'
-        )
-            return random_locator     # Вернем выбранный элемент напрямую
+                ingredient_locator[0],
+                f'{ingredient_locator[1]}[{index}]'
+            )
+            return random_locator
         else:
             raise AssertionError("Нет доступных ингредиентов")
 
     @allure.step('Статус проверки отображения всплывающего окна')
     def is_details_popup_displayed(self):
         try:
-            self.driver.find_element(*MainPageLocators.SECTION_INGREDIENT_DETAILS)
+            self.is_element_visible(MainPageLocators.SECTION_INGREDIENT_DETAILS)
             return True
         except:
             return False
@@ -60,12 +60,12 @@ class MainPage(BasePage):
     def add_ingredient_to_order(self, type='bun'):
         locator_from = self._get_random_ingredient_locator(type)
         ingredint_count_locator = locator_from[0], f'{locator_from[1]}/div[1]/p'
-        ingredient_count_before = self.get_text_from_element(ingredint_count_locator)    # На пустом бургере == 0 
+        ingredient_count_before = self.get_text_from_element(ingredint_count_locator)
         locator_to = MainPageLocators.SECTION_CONSTRUCTOR_BASKET
-        self.drag_and_drop_element(locator_from, locator_to)      # Добавление ингредиентов перетаскиванием
+        self.drag_and_drop_element(locator_from, locator_to)
         ingredient_count_after = self.get_text_from_element(ingredint_count_locator)
         
-        ingredient_count_diff = 0     # Проверяем, что число ингредиентов изменилось
+        ingredient_count_diff = 0
         if type == 'bun':
             ingredient_count_diff = 2
         elif type == 'ingredient':
@@ -73,7 +73,7 @@ class MainPage(BasePage):
         else:
             raise TypeError
         
-        if ingredient_count_before and ingredient_count_after:     # Если удалось получить количество ингредиентов, то проверяем разницу ДО и ПОСЛЕ
+        if ingredient_count_before and ingredient_count_after:
             return int(ingredient_count_after) - int(ingredient_count_before) == ingredient_count_diff
         else:
             raise AssertionError
@@ -108,20 +108,20 @@ class MainPage(BasePage):
     )
 
     @allure.step('Создать новый заказ')
-    def create_new_order(self, ingredient_count = 1):
-        self.add_ingredient_to_order('bun')    # Без булки не собрать заказ
+    def create_new_order(self, ingredient_count=1):
+        self.add_ingredient_to_order('bun')
         
-        for i in range(ingredient_count):      # Повторить добавление ингредиентов ingredient_count раз
+        for i in range(ingredient_count):
             self.add_ingredient_to_order('ingredient')
         
         self.click_to_element(MainPageLocators.BUTTON_CREATE_ORDER)
         self.wait_for_visibility(MainPageLocators.IMG_TICK_ANIMATION)
         number_locator = MainPageLocators.H2_ORDER_NUMBER_TITLE
-        order_number_default = self.get_text_from_element(number_locator)    # Номер заказа по умолчанию
+        order_number_default = self.get_text_from_element(number_locator)
         try:
-            self.wait.until_not(lambda d: self.get_text_from_element(number_locator) == order_number_default)     # Ожидание получения номера заказа
+            self.wait.until_not(lambda d: self.get_text_from_element(number_locator) == order_number_default)
             result = self.get_text_from_element(number_locator)
-            self.close_details_popup()  # Закрыть окно с деталями заказа
+            self.close_details_popup()
             return result
         except:
             return False, self.get_text_from_element(number_locator)
@@ -132,7 +132,7 @@ class MainPage(BasePage):
     
     @allure.step("Кликнуть на кнопку 'Конструктор'")
     def click_constructor_button(self):
-        self.click_element(MainPageLocators.CONSTRUCTOR_BUTTON)
+        self.click_to_element(GeneralLocators.LINK_CONSTRUCTOR)
 
     @allure.step("Проверить, что находимся на главной странице")
     def is_on_main_page(self):
@@ -141,4 +141,5 @@ class MainPage(BasePage):
     
 
     
+
         
