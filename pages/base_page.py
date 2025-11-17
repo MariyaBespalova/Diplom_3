@@ -1,28 +1,31 @@
+import allure
 from selenium.webdriver.remote.webdriver import WebDriver
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.common.action_chains import ActionChains
-import allure
+from selenium.webdriver.common.keys import Keys
+
 
 class BasePage:
     """
     Базовая страница для наследования остальными страницами типовых методов
+    Все вызовы WebDriverWait идут через этот класс
     """
     BASE_URL = None
     
     def __init__(self, driver: WebDriver):
         self.driver = driver
-        self.timeout = 10
-        self.wait = WebDriverWait(self.driver, 10)
+        self.timeout = 30
+        self.wait = WebDriverWait(self.driver, self.timeout)
 
     @allure.step('Открыть базовую страницу')
     def open(self):
         if self.BASE_URL:
             self.go_to_url(self.BASE_URL)
         else:
-            raise UnboundLocalError("BASE_URL не установлен")
+            raise UnboundLocalError
 
-    @allure.step('Перейти на страницу по адресу')
+    @allure.step('Перейти на страницу по адресу: {url}')
     def go_to_url(self, url):
         self.driver.get(url)
 
@@ -43,8 +46,9 @@ class BasePage:
             return None
     
     @allure.step('Ожидание отображение элемента')
-    def wait_for_visibility(self, locator):
-        return self.wait.until(ec.visibility_of_element_located(locator))
+    def wait_for_visibility(self, locator, timeout=None):
+        wait_timeout = timeout if timeout is not None else self.timeout
+        return WebDriverWait(self.driver, wait_timeout).until(ec.visibility_of_element_located(locator))
         
     @allure.step('Ожидание сокрытия элемента')
     def wait_for_invisibility(self, locator):
@@ -64,15 +68,21 @@ class BasePage:
     def click_to_element(self, locator):
         element = self.wait.until(ec.element_to_be_clickable(locator))
         self.scroll_to_element(locator)
+        
         try:
             element.click()
         except:
-            self.driver.execute_script("arguments[0].click();", element)
+            try:
+                self.driver.execute_script("arguments[0].click();", element)
+            except:
+                actions = ActionChains(self.driver)
+                actions.move_to_element(element).click().perform()
 
-    @allure.step('Передать текст в элемент ввода')
+    @allure.step('Передать текст "{text}" в элемент ввода')
     def set_text_to_element(self, locator, text):
         element = self.find_visible_element(locator)
         if element:
+            element.clear()
             element.send_keys(text)
     
     @allure.step('Получить текст элемента')
@@ -85,22 +95,40 @@ class BasePage:
 
     @allure.step('Приватный метод для внутренней проверки загрузки страницы')
     def _verify_page_loaded(self, locator):
-        try:
-            WebDriverWait(self.driver, 10).until(ec.presence_of_element_located(locator))
-            return True
-        except:
-            return False
+        self.wait.until(ec.presence_of_element_located(locator))
+        return True
         
     @allure.step('Публичный метод для проверки загрузки страницы')
     def is_loaded(self):
-        # Этот метод должен быть переопределен в дочерних классах
-        raise NotImplementedError("Метод is_loaded должен быть реализован в дочернем классе")
-    @allure.step('Ожидание отображение элемента')
+        return self._verify_page_loaded()
+    
+    @allure.step('Проверить видимость элемента')
     def is_element_visible(self, locator):
         try:
-            element = WebDriverWait(self.driver, 5).until(ec.visibility_of_element_located(locator))
+            element = self.wait.until(ec.visibility_of_element_located(locator))
             return element.is_displayed()
         except:
             return False
     
+    @allure.step('Получить все элементы по локатору')
+    def find_elements(self, locator):
+        return self.driver.find_elements(*locator)
     
+    @allure.step('Нажать клавишу ESC')
+    def press_escape(self):
+        actions = ActionChains(self.driver)
+        actions.send_keys(Keys.ESCAPE).perform()
+    
+    @allure.step('Подождать произвольное время (альтернатива time.sleep)')
+    def wait_custom(self, condition, timeout=10):
+        """
+        Кастомное ожидание вместо time.sleep
+        """
+        return WebDriverWait(self.driver, timeout).until(condition)
+    
+    @allure.step('Выполнить JavaScript код')
+    def execute_script(self, script, *args):
+        """
+        Выполнить JavaScript код на странице
+        """
+        return self.driver.execute_script(script, *args)
