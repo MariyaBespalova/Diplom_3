@@ -1,26 +1,42 @@
-import sys
-import os
 import pytest
 import requests
 import allure
 from selenium import webdriver
-
-# Добавляем путь к родительской папке
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 from helpers import generate_unique_email
 from data import URL
-from pages.login_page import LoginPage
-from pages.main_page import MainPage
-from pages.order_feed_page import OrderFeedPage
 
 
-@pytest.fixture(params=['chrome', 'firefox'])
+def pytest_addoption(parser):
+    """
+    Добавляем кастомные опции командной строки для pytest
+    """
+    parser.addoption(
+        "--browser",
+        action="store",
+        default="chrome",
+        help="Choose browser: chrome or firefox"
+    )
+
+
+@pytest.fixture
 def driver(request):
-    if request.param == 'chrome':
-        driver = webdriver.Chrome()
+    """
+    Фикстура для инициализации драйвера браузера
+    Поддерживает оба браузера через параметризацию или опцию командной строки
+    """
+    # Получаем значение браузера из командной строки или используем параметризацию
+    if hasattr(request, 'param'):
+        # Если фикстура параметризована (автоматический запуск в обоих браузерах)
+        browser_name = request.param
     else:
+        # Если используется опция командной строки
+        browser_name = request.config.getoption("--browser")
+    
+    if browser_name == "firefox":
         driver = webdriver.Firefox()
+    else:
+        driver = webdriver.Chrome()
+    
     driver.maximize_window()
     yield driver
     driver.quit()
@@ -28,30 +44,54 @@ def driver(request):
 
 @pytest.fixture
 def create_user():
+    """
+    Фикстура для создания пользователя и его последующего удаления
+    """
     users_to_delete = []
 
     def _create_user():
+        # Генерируем данные пользователя
         email = generate_unique_email()
         password = '12345654321'
         name = "Testing User"
         
+        # Собираем payload
         payload = {
             'email': email,
             'password': password,
             'name': name
         }
         
-        response = requests.post(url=f'{URL.API_AUTH}/register', json=payload)
+        # Делаем запрос на создание
+        response = requests.post(
+            url=f'{URL.API_AUTH}/register',
+            json=payload
+        )
+
+        # Сохраняем учетные данные для последующего удаления пользователя
         users_to_delete.append((email, password))
+
         return email, password
     
     yield _create_user
     
+    # Удаляем пользователей после выполнения тестов
     for email, password in users_to_delete:
-        payload = {"email": email, "password": password}
-        response = requests.post(url=f'{URL.API_AUTH}/login', json=payload)
+        payload = {
+            "email": email,
+            "password": password
+        }
+        response = requests.post(
+            url=f'{URL.API_AUTH}/login',
+            json=payload
+        )
         if response.status_code == 200:
             access_token = response.json()["accessToken"]
             headers = {"Authorization": f"{access_token}"}
+            response = requests.delete(
+                url=f'{URL.API_AUTH}/user',
+                headers=headers
+            )
             requests.delete(url=f'{URL.API_AUTH}/user', headers=headers)
             
+
